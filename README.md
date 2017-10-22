@@ -1,5 +1,7 @@
 # clj-torrent
 
+[![Clojars Project](https://img.shields.io/clojars/v/clj-bencode.svg)](https://clojars.org/clj-bencode)
+
 A Clojure library for BitTorrent bencoding.
 
 ## License
