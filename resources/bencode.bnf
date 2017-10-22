@@ -1,0 +1,19 @@
+<S> = belem | ""
+
+<belem> = bstring | binteger | blist
+
+blist = <"l"> belem* <"e">
+binteger = <"i"> number <"e">
+bstring = length <":"> contents
+
+length = zero | positive-number
+contents = #"."*
+
+<zero> = "0"
+<nonzero> = "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9";
+<digit> = zero | nonzero
+
+<positive-number> = nonzero digit*
+<negative-number> = "-" positive-number
+<number> = negative-number | zero | positive-number
+
