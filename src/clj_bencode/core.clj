@@ -63,13 +63,16 @@
      #(if (zero? (mod (inc (- %1 offset)) n)) (f %2) %2)
      coll)))
 
+(defn- hyphenate [s]
+  (clojure.string/replace s " " "-"))
+
 (defn- split-next-dict [x]
   (let [[tag-char after-tag] (split-at 1 x)
         [list-contents after-contents] (extract-list-contents [] after-tag)
         [end-tag after-end] (split-at 1 after-contents)]
     (assert (= \d (first tag-char)))
     (assert (= \e (first end-tag)))
-    [(apply hash-map (map-every-nth keyword list-contents 2 1))
+    [(apply hash-map (map-every-nth (comp keyword hyphenate) list-contents 2 1))
      after-end]))
 
 (defn- split-next [x]
