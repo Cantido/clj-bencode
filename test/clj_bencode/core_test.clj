@@ -1,10 +1,10 @@
-(ns clj-torrent.bencoding-test
+(ns clj-bencode.core-test
   (:require [clojure.test :refer :all]
             [clojure.test.check.clojure-test :refer :all]
             [clojure.test.check :as tc]
             [clojure.test.check.generators :as gen]
             [clojure.test.check.properties :as prop]
-            [clj-torrent.bencoding :as b])
+            [clj-bencode.core :as b])
   (:import (java.nio.charset StandardCharsets)))
 
 (defn utf8 [^String x]
@@ -75,41 +75,39 @@
   encode-mixed-nested-dicts encode-mixed-nested-lists)
 
 (defspec encode-ints 1000
-  (prop/for-all [x gen/int]
-    (= x (-> x b/encode b/decode))))
+         (prop/for-all [x gen/int]
+                       (= x (-> x b/encode b/decode))))
 
 (defspec encode-strings 1000
-  (prop/for-all [x gen/string]
-    (= x (-> x b/encode b/decode))))
+         (prop/for-all [x gen/string]
+                       (= x (-> x b/encode b/decode))))
 
 (defspec encode-int-lists
-  (prop/for-all [x (gen/list gen/int)]
-    (= x (-> x b/encode b/decode))))
+         (prop/for-all [x (gen/list gen/int)]
+                       (= x (-> x b/encode b/decode))))
 
 (defspec encode-string-lists
-  (prop/for-all [x (gen/list gen/string)]
-    (= x (-> x b/encode b/decode))))
+         (prop/for-all [x (gen/list gen/string)]
+                       (= x (-> x b/encode b/decode))))
 
 ;; the complexity of mixed collections balloons rapidly,
 ;; so setting this much higher than 50 tests will
 ;; take way too long
 (defspec encode-mixed-lists 50
-  (prop/for-all [x (gen/list gen-leaf)]
-    (= x (-> x b/encode b/decode))))
+         (prop/for-all [x (gen/list gen-leaf)]
+                       (= x (-> x b/encode b/decode))))
 
 (defspec encode-string-dicts
-  (prop/for-all [x (gen/map gen/keyword gen/string)]
-    (= x (-> x b/encode b/decode))))
+         (prop/for-all [x (gen/map gen/keyword gen/string)]
+                       (= x (-> x b/encode b/decode))))
 
 (defspec encode-int-dicts
-  (prop/for-all [x (gen/map gen/keyword gen/int)]
-    (= x (-> x b/encode b/decode))))
+         (prop/for-all [x (gen/map gen/keyword gen/int)]
+                       (= x (-> x b/encode b/decode))))
 
 ;; the complexity of mixed collections balloons rapidly,
 ;; so setting this much higher than 50 tests will
 ;; take way too long
 (defspec encode-mixed-dicts 50
-  (prop/for-all [x (gen/map gen/keyword gen-leaf)]
-    (= x (-> x b/encode b/decode))))
-
-
+         (prop/for-all [x (gen/map gen/keyword gen-leaf)]
+                       (= x (-> x b/encode b/decode))))

@@ -1,7 +1,7 @@
-(ns clj-torrent.bencoding
+(ns clj-bencode.core
   (:import (java.util Collection Map)
-           (java.nio.charset StandardCharsets)
-           (clojure.lang MapEntry Keyword)))
+    (java.nio.charset StandardCharsets)
+    (clojure.lang MapEntry Keyword)))
 
 (defn- to-utf8 [^String x]
   (.encode StandardCharsets/UTF_8 x))
@@ -88,6 +88,3 @@
 
 (defn decode [x]
   (first (split-next (from-utf8 x))))
-
-
-
