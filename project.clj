@@ -1,4 +1,4 @@
-(defproject clj-torrent "0.1.0-SNAPSHOT"
+(defproject clj-torrent "1.0.0-SNAPSHOT"
   :description "A Clojure library for BitTorrent bencoding."
   :url "https://github.com/Cantido/clj-bencode"
   :license {:name "GNU General Public License"
