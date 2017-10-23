@@ -9,7 +9,7 @@
   (:import (java.nio.charset StandardCharsets)
            (java.io File)
            (org.apache.commons.io IOUtils)
-           (java.net URI URL)
+           (java.net URL)
            (java.nio ByteBuffer)
            (java.util Map)))
 
@@ -29,13 +29,16 @@
 
 
 (defn utf8 [^String x]
-  (.encode StandardCharsets/UTF_8 x))
+  (byte-array (.array (.encode StandardCharsets/UTF_8 x))))
 
 (defn utf8d [x]
-  (str (.decode StandardCharsets/UTF_8 x)))
+  (str (.decode StandardCharsets/UTF_8 (ByteBuffer/wrap (byte-array x)))))
+
+(defn strbytes [x] (IOUtils/toByteArray x))
+(defn filebytes [^URL x] (IOUtils/toByteArray x))
 
 (deftest decode-real-string-test
-  (let [result (b/decode (utf8 torrentstring))]
+  (let [result (b/decode (strbytes torrentstring))]
     (is (= "https://torrents.linuxmint.com/announce.php" (get result "announce")))
     (is (= "Transmission/2.84 (14307)" (get result  "created by")))
     (is (= 1499021259 (get result  "creation date")))
@@ -48,7 +51,7 @@
       (is (= 0 (get info "private"))))))
 
 (deftest decode-truncated-file-test
-  (let [result (b/decode (ByteBuffer/wrap (IOUtils/toByteArray (truncated-file))))]
+  (let [result (b/decode (filebytes (truncated-file)))]
     (is (= "https://torrents.linuxmint.com/announce.php" (get result "announce")))
     (is (= "Transmission/2.84 (14307)" (get result  "created by")))
     (is (= 1499021259 (get result  "creation date")))
@@ -61,7 +64,7 @@
       (is (= 0 (get info "private"))))))
 
 (deftest decode-full-file-test
-  (let [result (b/decode (ByteBuffer/wrap (IOUtils/toByteArray (full-file))))]
+  (let [result (b/decode (filebytes (full-file)))]
     (is (= "https://torrents.linuxmint.com/announce.php" (get result "announce")))
     (is (= "Transmission/2.84 (14307)" (get result  "created by")))
     (is (= 1499021259 (get result  "creation date")))
@@ -70,31 +73,31 @@
       (is (= 1676083200 (get info "length")))
       (is (= 1048576 (get info "piece length")))
       (is (= "linuxmint-18.2-cinnamon-64bit.iso" (get info "name")))
-      ;(is (= "a" (get info "pieces")))
+      ;(is (= "a" (get info "pieces")))f
       (is (= 0 (get info "private"))))))
 
 (deftest encode-test
   (testing "encode an integer"
-    (is (= (utf8 "i3e") (b/encode 3)))
-    (is (= (utf8 "i0e") (b/encode 0)))
-    (is (= (utf8 "i-1e") (b/encode -1))))
+    (is (= "i3e" (utf8d (b/encode 3))))
+    (is (= "i0e" (utf8d (b/encode 0))))
+    (is (= "i-1e" (utf8d (b/encode -1)))))
   (testing "encode a string"
-    (is (= (utf8 "1:a") (b/encode "a")))
-    (is (= (utf8 "3:foo") (b/encode "foo")))
-    (is (= (utf8 "7:foo bar") (b/encode "foo bar"))))
+    (is (= "1:a" (utf8d (b/encode "a"))))
+    (is (= "3:foo" (utf8d (b/encode "foo"))))
+    (is (= "7:foo bar" (utf8d (b/encode "foo bar")))))
   (testing "encode a list of integers"
-    (is (= (utf8 "li1ei2ei3ee") (b/encode [1 2 3]))))
+    (is (= "li1ei2ei3ee" (utf8d (b/encode [1 2 3])))))
   (testing "encode a list of strings"
-    (is (= (utf8 "l1:a1:b1:ce") (b/encode ["a" "b" "c"])))
-    (is (= (utf8 "l1:00:e") (b/encode ["0" ""])))
+    (is (= "l1:a1:b1:ce" (utf8d (b/encode ["a" "b" "c"]))))
+    (is (= "l1:00:e" (utf8d (b/encode ["0" ""]))))
     (testing "including characters above U+FFFF"
-      (is (= (utf8 "2:𐐷") (b/encode "𐐷")))
-      (is (= (utf8 "4:𐐷bc") (b/encode "𐐷bc")))
-      (is (= (utf8 "4:a𐐷c") (b/encode "a𐐷c")))
-      (is (= (utf8 "4:ab𐐷") (b/encode "ab𐐷")))))
+      (is (= "2:𐐷" (utf8d (b/encode "𐐷"))))
+      (is (= "4:𐐷bc" (utf8d (b/encode "𐐷bc"))))
+      (is (= "4:a𐐷c" (utf8d (b/encode "a𐐷c"))))
+      (is (= "4:ab𐐷" (utf8d (b/encode "ab𐐷"))))))
   (testing "encode a dict"
     (testing "that is empty"
-      (is (= "de") (utf8d (b/encode {}))))
+      (is (= "de" (utf8d (b/encode {})))))
     (testing "that contains string keys and values"
       (is (= "d3:cow3:mooe" (utf8d (b/encode {:cow "moo"}))))
       (is (= "d8:cow says3:mooe" (utf8d (b/encode {"cow says" "moo"}))))
