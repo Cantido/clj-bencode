@@ -4,14 +4,74 @@
             [clojure.test.check :as tc]
             [clojure.test.check.generators :as gen]
             [clojure.test.check.properties :as prop]
-            [clj-bencode.core :as b])
-  (:import (java.nio.charset StandardCharsets)))
+            [clj-bencode.core :as b]
+            [clojure.java.io :as io])
+  (:import (java.nio.charset StandardCharsets)
+           (java.io File)
+           (org.apache.commons.io IOUtils)
+           (java.net URI URL)
+           (java.nio ByteBuffer)
+           (java.util Map)))
+
+(defn truncated-file ^URL []
+  (io/resource "linuxmint-18.2-cinnamon-64bit.iso.torrent-test"))
+
+(defn full-file ^URL []
+  (io/resource "linuxmint-18.2-cinnamon-64bit.iso.torrent"))
+
+(defn full-file-string ^String []
+  (slurp (io/file (full-file))))
+
+(defn full-file-buffer []
+  (ByteBuffer/wrap (IOUtils/toByteArray (full-file-string))))
+
+(def torrentstring "d8:announce43:https://torrents.linuxmint.com/announce.php10:created by25:Transmission/2.84 (14307)13:creation datei1499021259e8:encoding5:UTF-84:infod6:lengthi1676083200e4:name33:linuxmint-18.2-cinnamon-64bit.iso12:piece lengthi1048576e6:pieces1:a7:privatei0eee")
+
 
 (defn utf8 [^String x]
   (.encode StandardCharsets/UTF_8 x))
 
 (defn utf8d [x]
   (str (.decode StandardCharsets/UTF_8 x)))
+
+(deftest decode-real-string-test
+  (let [result (b/decode (utf8 torrentstring))]
+    (is (= "https://torrents.linuxmint.com/announce.php" (get result "announce")))
+    (is (= "Transmission/2.84 (14307)" (get result  "created by")))
+    (is (= 1499021259 (get result  "creation date")))
+    (is (= "UTF-8" (get result "encoding")))
+    (let [info (get result "info")]
+      (is (= 1676083200 (get info "length")))
+      (is (= 1048576 (get info "piece length")))
+      (is (= "linuxmint-18.2-cinnamon-64bit.iso" (get info "name")))
+      (is (= "a" (get info "pieces")))
+      (is (= 0 (get info "private"))))))
+
+(deftest decode-truncated-file-test
+  (let [result (b/decode (ByteBuffer/wrap (IOUtils/toByteArray (truncated-file))))]
+    (is (= "https://torrents.linuxmint.com/announce.php" (get result "announce")))
+    (is (= "Transmission/2.84 (14307)" (get result  "created by")))
+    (is (= 1499021259 (get result  "creation date")))
+    (is (= "UTF-8" (get result "encoding")))
+    (let [info (get result "info")]
+      (is (= 1676083200 (get info "length")))
+      (is (= 1048576 (get info "piece length")))
+      (is (= "linuxmint-18.2-cinnamon-64bit.iso" (get info "name")))
+      (is (= "a" (get info "pieces")))
+      (is (= 0 (get info "private"))))))
+
+(deftest decode-full-file-test
+  (let [result (b/decode (ByteBuffer/wrap (IOUtils/toByteArray (full-file))))]
+    (is (= "https://torrents.linuxmint.com/announce.php" (get result "announce")))
+    (is (= "Transmission/2.84 (14307)" (get result  "created by")))
+    (is (= 1499021259 (get result  "creation date")))
+    (is (= "UTF-8" (get result "encoding")))
+    (let [info (get result "info")]
+      (is (= 1676083200 (get info "length")))
+      (is (= 1048576 (get info "piece length")))
+      (is (= "linuxmint-18.2-cinnamon-64bit.iso" (get info "name")))
+      ;(is (= "a" (get info "pieces")))
+      (is (= 0 (get info "private"))))))
 
 (deftest encode-test
   (testing "encode an integer"
@@ -20,7 +80,8 @@
     (is (= (utf8 "i-1e") (b/encode -1))))
   (testing "encode a string"
     (is (= (utf8 "1:a") (b/encode "a")))
-    (is (= (utf8 "3:foo") (b/encode "foo"))))
+    (is (= (utf8 "3:foo") (b/encode "foo")))
+    (is (= (utf8 "7:foo bar") (b/encode "foo bar"))))
   (testing "encode a list of integers"
     (is (= (utf8 "li1ei2ei3ee") (b/encode [1 2 3]))))
   (testing "encode a list of strings"
@@ -36,7 +97,8 @@
       (is (= "de") (utf8d (b/encode {}))))
     (testing "that contains string keys and values"
       (is (= "d3:cow3:mooe" (utf8d (b/encode {:cow "moo"}))))
-      (is (= "d3:cow3:moo4:spam4:eggse" (utf8d (b/encode {:cow "moo" :spam "eggs"})))))))
+      (is (= "d8:cow says3:mooe" (utf8d (b/encode {"cow says" "moo"}))))
+      (is (= "d3:cow3:moo4:spam4:eggse" (utf8d (b/encode {"cow" "moo" "spam" "eggs"})))))))
 
 
 (deftest decode-test
@@ -46,6 +108,7 @@
     (is (= -10 (b/decode (utf8 "i-10e")))))
   (testing "decode a string"
     (is (= "foo" (b/decode (utf8 "3:foo"))))
+    (is (= "foo bar" (b/decode (utf8 "7:foo bar"))))
     (testing "handles unicode characters above U+FFFF"
       (is (= "𐐷" (b/decode (utf8 "2:𐐷"))))
       (is (= "𐐷bc" (b/decode (utf8 "4:𐐷bc"))))
@@ -59,11 +122,12 @@
   (testing "decode a mixed list"
     (is (= [{} 0] (b/decode (utf8 "ldei0ee")))))
   (testing "decode a dict"
-    (is (= {:cow "moo" :spam "eggs"} (b/decode (utf8 "d3:cow3:moo4:spam4:eggse"))))))
+    (is (= {"cow" "moo" "spam" "eggs"} (b/decode (utf8 "d3:cow3:moo4:spam4:eggse"))))
+    (is (= {"cow says" "moo" "spam" "eggs"} (b/decode (utf8 "d8:cow says3:moo4:spam4:eggse"))))))
 
 (def gen-primitives (gen/one-of [gen/int gen/string]))
 (def gen-list (gen/list gen-primitives))
-(def gen-dict (gen/map gen/keyword gen-primitives))
+(def gen-dict (gen/map gen/string gen-primitives))
 (def gen-leaf (gen/one-of [gen-primitives gen-list gen-dict]))
 
 ;; Just to make an editor shut up about these defspec's
@@ -72,13 +136,14 @@
   encode-ints encode-strings
   encode-int-lists encode-string-lists encode-mixed-lists
   encode-string-dicts encode-int-dicts encode-mixed-dicts
+  encode-shallow-dicts encode-dict-in-dict
   encode-mixed-nested-dicts encode-mixed-nested-lists)
 
-(defspec encode-ints 1000
+(defspec encode-ints
          (prop/for-all [x gen/int]
                        (= x (-> x b/encode b/decode))))
 
-(defspec encode-strings 1000
+(defspec encode-strings
          (prop/for-all [x gen/string]
                        (= x (-> x b/encode b/decode))))
 
@@ -90,24 +155,27 @@
          (prop/for-all [x (gen/list gen/string)]
                        (= x (-> x b/encode b/decode))))
 
-;; the complexity of mixed collections balloons rapidly,
-;; so setting this much higher than 50 tests will
-;; take way too long
-(defspec encode-mixed-lists 50
+(defspec encode-mixed-lists
          (prop/for-all [x (gen/list gen-leaf)]
                        (= x (-> x b/encode b/decode))))
 
+(defspec encode-shallow-dicts
+         (prop/for-all [x (gen/map gen/string-alphanumeric (gen/return []))]
+                       (= x (-> x b/encode b/decode))))
+
 (defspec encode-string-dicts
-         (prop/for-all [x (gen/map gen/keyword gen/string)]
+         (prop/for-all [x (gen/map gen/string gen/string)]
                        (= x (-> x b/encode b/decode))))
 
 (defspec encode-int-dicts
-         (prop/for-all [x (gen/map gen/keyword gen/int)]
-                       (= x (-> x b/encode b/decode))))
+  (prop/for-all [x (gen/map gen/string gen/int)]
+    (= x (-> x b/encode b/decode))))
 
-;; the complexity of mixed collections balloons rapidly,
-;; so setting this much higher than 50 tests will
-;; take way too long
-(defspec encode-mixed-dicts 50
-         (prop/for-all [x (gen/map gen/keyword gen-leaf)]
-                       (= x (-> x b/encode b/decode))))
+
+(defspec encode-dict-in-dict
+  (prop/for-all [x (gen/map gen/string (gen/map gen/string gen/int))]
+    (= x (-> x b/encode b/decode))))
+
+(defspec encode-mixed-dicts
+  (prop/for-all [x (gen/map gen/string (gen/return {"a" 1}))]
+    (= x (-> x b/encode b/decode))))

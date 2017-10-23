@@ -11,12 +11,32 @@
 
 (defmulti represent class :default String)
 
+(defn- represent-collection [coll]
+  (if (seq coll)
+    (concat (seq "l")
+            (mapcat represent coll)
+            (seq "e"))
+    "le"))
+
+
+(defn- reduce-map-represent [init k v]
+  (concat (seq init)
+          (represent k)
+          (represent v)))
+
+(defn- represent-map [m]
+  (if (seq m)
+    (concat (seq "d")
+            (reduce-kv reduce-map-represent [] m)
+            (seq "e"))
+    "de"))
+
 (defmethod represent Long [x] ["i" x "e"])
 (defmethod represent String [x] [(count x) ":" x])
 (defmethod represent Keyword [x] (represent (name x)))
-(defmethod represent Collection [x] (flatten ["l" (map represent x) "e"]))
-(defmethod represent Map [x] (flatten ["d" (map represent (.entrySet x)) "e"]))
-(defmethod represent MapEntry [x] [(represent (key x)) (represent (val x))])
+(defmethod represent Collection [x] (represent-collection x))
+(defmethod represent Map [x] (represent-map x))
+
 
 (defn encode [x]
   (to-utf8 (apply str (represent x))))
@@ -56,23 +76,13 @@
     [list-contents
      after-end]))
 
-(defn map-every-nth
-  ([f coll n] (map-every-nth f coll n 0))
-  ([f coll n offset]
-   (map-indexed
-     #(if (zero? (mod (inc (- %1 offset)) n)) (f %2) %2)
-     coll)))
-
-(defn- hyphenate [s]
-  (clojure.string/replace s " " "-"))
-
 (defn- split-next-dict [x]
   (let [[tag-char after-tag] (split-at 1 x)
         [list-contents after-contents] (extract-list-contents [] after-tag)
         [end-tag after-end] (split-at 1 after-contents)]
     (assert (= \d (first tag-char)))
     (assert (= \e (first end-tag)))
-    [(apply hash-map (map-every-nth (comp keyword hyphenate) list-contents 2 1))
+    [(apply hash-map list-contents)
      after-end]))
 
 (defn- split-next [x]
