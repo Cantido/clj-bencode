@@ -1,8 +1,11 @@
 (ns clj-bencode.core
+  (:require [clojure.java.io :as io])
   (:import (java.util Collection Map)
            (java.nio.charset StandardCharsets)
            (clojure.lang Keyword)
-           (java.nio ByteBuffer CharBuffer)))
+           (java.nio ByteBuffer CharBuffer)
+           (java.io InputStream)
+           (org.apache.commons.io IOUtils)))
 
 (def ^:private byte-array-class (class (byte-array 1)))
 
@@ -208,8 +211,14 @@
              new-list (concat list-so-far next-list-element)]
          (recur new-list rest-of-coll))))))
 
-
 (defn decode
-  "Decodes a b-encoded byte array."
+  "Decodes b-encoded data.
+
+  Accepts any data type which can satisfy clojure.java.io/IOFactory,
+  which includes files, input streams, bytes arrays, and strings."
   [x]
-  (ffirst (split-next (byte-array x))))
+  (-> x
+    io/input-stream
+    IOUtils/toByteArray
+    split-next
+    ffirst))
