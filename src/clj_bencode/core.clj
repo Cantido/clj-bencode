@@ -4,16 +4,16 @@
            (clojure.lang Keyword)
            (java.nio ByteBuffer CharBuffer)))
 
-(def byte-array-class (class (byte-array 1)))
+(def ^:private byte-array-class (class (byte-array 1)))
 
-(defmulti byte-buffer
+(defmulti ^:private  byte-buffer
   "Coerces the arg into a java.nio.ByteBuffer"
   class)
 
 (defmethod byte-buffer ByteBuffer [x] x)
 (defmethod byte-buffer byte-array-class [x] (ByteBuffer/wrap x))
 
-(defn bb-array
+(defn- bb-array
   "Extracts the contents of the byte buffer, truncating unused buffer space.
    Hides gross mutability."
   [^ByteBuffer b]
@@ -21,7 +21,7 @@
     (.get b arr)
     arr))
 
-(defn cb-array
+(defn- cb-array
   [^CharBuffer b]
   (let [arr (char-array (.limit b))]
     (.get b arr)
@@ -36,7 +36,7 @@
     (.encode StandardCharsets/UTF_8)
     (bb-array)))
 
-(defn stringify
+(defn- stringify
   "Stringifies then byteifies an integer."
   [x]
   (map byte (seq (str x))))
@@ -50,7 +50,7 @@
     (cb-array)
     (apply str)))
 
-(defmulti represent class :default String)
+(defmulti ^:private represent class :default String)
 
 (defn- represent-long [x]
   (byte-array
@@ -97,18 +97,18 @@
 (defn encode [x]
   (byte-array (represent x)))
 
-(defn seq-or-nil? [x]
+(defn- seq-or-nil? [x]
   (or
     (seq? x)
     (nil? x)))
 
-(defn in-char-range? [x] (<= 0 (int x) 255))
-(defn is-char? [expected actual]
+(defn- in-char-range? [x] (<= 0 (int x) 255))
+(defn- is-char? [expected actual]
   (and (some? actual)
        (in-char-range? (int actual))
        (= (char expected) (char actual))))
 
-(defn bytestr
+(defn- bytestr
   "Converts a collection of bytes into a string by applying char to each byte."
   ^String [x]
   (apply str (map char x)))
@@ -188,7 +188,7 @@
       :else [(list) (seq x)])))
 
 
-(defn end-of-list? [x] (or (nil? x)
+(defn- end-of-list? [x] (or (nil? x)
                            (not (in-char-range? x))
                            (is-char? \e x)))
 
