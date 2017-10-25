@@ -8,11 +8,9 @@
   (:import (org.apache.commons.io IOUtils)
            (java.net URL)))
 
-(defn truncated-file ^URL []
-  (io/resource "linuxmint-18.2-cinnamon-64bit.iso.torrent-test"))
+(def truncated-file-url (io/resource "linuxmint-18.2-cinnamon-64bit.iso.torrent-test"))
 
-(defn full-file ^URL []
-  (io/resource "linuxmint-18.2-cinnamon-64bit.iso.torrent"))
+(def full-file-url (io/resource "linuxmint-18.2-cinnamon-64bit.iso.torrent"))
 
 (def torrentstring "d8:announce43:https://torrents.linuxmint.com/announce.php10:created by25:Transmission/2.84 (14307)13:creation datei1499021259e8:encoding5:UTF-84:infod6:lengthi1676083200e4:name33:linuxmint-18.2-cinnamon-64bit.iso12:piece lengthi1048576e6:pieces1:a7:privatei0eee")
 
@@ -38,7 +36,7 @@
       (is (= 0 (get info "private"))))))
 
 (deftest decode-truncated-file-test
-  (let [result (b/decode (filebytes (truncated-file)))]
+  (let [result (b/decode (filebytes truncated-file-url))]
     (is (= "https://torrents.linuxmint.com/announce.php" (get result "announce")))
     (is (= "Transmission/2.84 (14307)" (get result  "created by")))
     (is (= 1499021259 (get result  "creation date")))
@@ -51,7 +49,7 @@
       (is (= 0 (get info "private"))))))
 
 (deftest decode-full-file-test
-  (let [result (b/decode (filebytes (full-file)))]
+  (let [result (b/decode (filebytes full-file-url))]
     (is (= "https://torrents.linuxmint.com/announce.php" (get result "announce")))
     (is (= "Transmission/2.84 (14307)" (get result  "created by")))
     (is (= 1499021259 (get result  "creation date")))
@@ -62,6 +60,11 @@
       (is (= "linuxmint-18.2-cinnamon-64bit.iso" (get info "name")))
       ;(is (= "a" (get info "pieces")))f
       (is (= 0 (get info "private"))))))
+
+(deftest encode-full-file-test
+  (let [file (filebytes full-file-url)]
+    (is (= (count (seq file))
+           (count (seq (-> file b/decode b/encode)))))))
 
 (deftest encode-test
   (testing "encode"
