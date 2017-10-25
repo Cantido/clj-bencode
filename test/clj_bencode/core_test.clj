@@ -6,11 +6,12 @@
             [clj-bencode.core :as b]
             [clojure.java.io :as io])
   (:import (org.apache.commons.io IOUtils)
-           (java.net URL)))
+           (java.net URL)
+           (java.nio.charset StandardCharsets)))
 
 (def truncated-file-url (io/resource "linuxmint-18.2-cinnamon-64bit.iso.torrent-test"))
-
 (def full-file-url (io/resource "linuxmint-18.2-cinnamon-64bit.iso.torrent"))
+(def bytes-file-url (io/resource "grosspart.bin"))
 
 (def torrentstring "d8:announce43:https://torrents.linuxmint.com/announce.php10:created by25:Transmission/2.84 (14307)13:creation datei1499021259e8:encoding5:UTF-84:infod6:lengthi1676083200e4:name33:linuxmint-18.2-cinnamon-64bit.iso12:piece lengthi1048576e6:pieces1:a7:privatei0eee")
 
@@ -58,13 +59,27 @@
       (is (= 1676083200 (get info "length")))
       (is (= 1048576 (get info "piece length")))
       (is (= "linuxmint-18.2-cinnamon-64bit.iso" (get info "name")))
-      ;(is (= "a" (get info "pieces")))f
+      (is (= 31980 (count
+                     (.getBytes
+                      (str (get info "pieces"))
+                      StandardCharsets/UTF_8))))
       (is (= 0 (get info "private"))))))
 
 (deftest encode-full-file-test
-  (let [file (filebytes full-file-url)]
+  (let [file (filebytes full-file-url)
+        decoded (b/decode file)
+        encoded (b/encode decoded)]
+    (spit (io/file "decoded") (str decoded))
+    (spit (io/file "reencoded") (String. encoded))
     (is (= (count (seq file))
-           (count (seq (-> file b/decode b/encode)))))))
+           (count (seq encoded))))))
+
+(deftest bytes-file-unicode-test
+  (let [file (filebytes bytes-file-url)
+        decoded (b/from-utf8 file)
+        encoded (b/to-utf8 decoded)]
+    (is (= (count (seq file))
+           (count (seq encoded))))))
 
 (deftest encode-test
   (testing "encode"
@@ -98,8 +113,9 @@
         (is (= "d0:lee" (b/from-utf8 (b/encode {"" []}))))
         (is (= "d3:cow3:mooe" (b/from-utf8 (b/encode {:cow "moo"}))))
         (is (= "d8:cow says3:mooe" (b/from-utf8 (b/encode {"cow says" "moo"}))))
-        (is (= "d3:cow3:moo4:spam4:eggse" (b/from-utf8 (b/encode {"cow" "moo" "spam" "eggs"}))))))))
-
+        (is (= "d3:cow3:moo4:spam4:eggse" (b/from-utf8 (b/encode {"cow" "moo" "spam" "eggs"})))))
+      (testing "should sort their keys"
+        (is (= "d1:ai1e1:bi2ee" (b/from-utf8 (b/encode {"b" 2 "a" 1}))))))))
 
 (deftest decode-test
   (testing "decode"
@@ -118,6 +134,7 @@
         (is (= "ab𐐷" (b/decode (b/to-utf8 "6:ab𐐷"))))))
     (testing "lists"
       (is (= [] (b/decode (b/to-utf8 "le"))))
+      (is (= [1] (b/decode (b/to-utf8 "li1ee"))))
       (testing "of integers"
         (is (= [1 2 3] (b/decode (b/to-utf8 "li1ei2ei3ee")))))
       (testing "of strings"
