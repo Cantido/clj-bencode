@@ -1,4 +1,6 @@
 (ns clj-bencode.core
+  "Encodes and decodes between BitTorrent b-encoding and
+   Clojure data structures."
   (:require [clojure.java.io :as io])
   (:import (java.util Collection Map)
            (java.nio.charset StandardCharsets)
