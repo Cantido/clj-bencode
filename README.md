@@ -117,8 +117,8 @@ FileNotFoundException hi! (No such file or directory)  java.io.FileInputStream.o
 ;; Map keys are always strings, even if you encoded a keyword.
 ;; String-to-keyword conversion is lossy (since we need to encode spaces into
 ;; hyphens, but what about decoding?) so this library avoids that.
-(b/decode (.getBytes "d3:keyi9000ee"))
-=> {"key" 9000}
+(b/decode (.getBytes "d8:cow says3:mooe"))
+=> {"cow says" "moo"}
 ```
 
 
