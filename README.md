@@ -11,7 +11,7 @@ Clj-torrent's tests require Clojure v1.7 or later,
 so it has only been tested back to that version.
 If you want to be a pioneer, you can try using it on earlier versions.
 
-Add the following line to your leiningen dependenciesL
+Add the following line to your leiningen dependencies:
 
 ```clojure
 [clj-bencode "4.0.0"]
