@@ -6,7 +6,7 @@
            (java.nio.charset StandardCharsets)
            (clojure.lang Keyword)
            (java.nio ByteBuffer CharBuffer)
-           (java.io InputStream Reader ByteArrayOutputStream)
+           (java.io InputStream Reader ByteArrayOutputStream IOException)
            (org.apache.commons.io IOUtils)))
 
 (def ^:private byte-array-class (class (byte-array 1)))
@@ -81,6 +81,7 @@
 
 (defn- decode-int [stream delimeter & ch]
   (loop [i (if (nil? ch) (.read stream) (first ch)), result ""]
+    (when (= -1 (int i)) (throw (IOException. "End of input stream reached earlier than expected.")))
     (let [c (char i)]
       (if (= c delimeter)
         (BigInteger. result)
