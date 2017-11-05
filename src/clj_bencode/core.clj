@@ -79,7 +79,7 @@
 
 (declare ^:private decode-next)
 
-(defn- decode-int [stream delimeter & ch]
+(defn- decode-int [^InputStream stream delimeter & ch]
   (loop [i (if (nil? ch) (.read stream) (first ch)), result ""]
     (when (= -1 (int i)) (throw (IOException. "End of input stream reached earlier than expected.")))
     (let [c (char i)]
