@@ -122,7 +122,10 @@
         (is (= (byte-seq "𐐷") (seq (b/decode (.getBytes  "4:𐐷")))))
         (is (= (byte-seq "𐐷bc") (seq (b/decode (.getBytes  "6:𐐷bc")))))
         (is (= (byte-seq "a𐐷c") (seq (b/decode (.getBytes  "6:a𐐷c")))))
-        (is (= (byte-seq "ab𐐷") (seq (b/decode (.getBytes  "6:ab𐐷")))))))
+        (is (= (byte-seq "ab𐐷") (seq (b/decode (.getBytes  "6:ab𐐷"))))))
+      (testing "of bytes"
+        (is (= (map #(unchecked-byte (+ 256 %)) [192 168 1 100 0x1b 0x39])
+               (seq (b/decode (byte-array [54 58 192 168 1 100 0x1b 0x39])))))))
     (testing "lists"
       (is (= [] (b/decode (.getBytes  "le"))))
       (is (= [1] (b/decode (.getBytes  "li1ee"))))
@@ -133,10 +136,20 @@
         (is (= ["0" ""] (b/decode (.getBytes  "l1:00:e")))))
       (testing "of mixed contents"
         (is (= [{} 0] (b/decode (.getBytes  "ldei0ee"))))))
-    (testing "decode a dict"
+    (testing "a dict"
       (is (= {"" []} (b/decode (.getBytes  "d0:lee"))))
       (is (= {"cow" "moo" "spam" "eggs"} (b/decode (.getBytes  "d3:cow3:moo4:spam4:eggse"))))
-      (is (= {"cow says" "moo" "spam" "eggs"} (b/decode (.getBytes  "d8:cow says3:moo4:spam4:eggse")))))))
+      (is (= {"cow says" "moo" "spam" "eggs"} (b/decode (.getBytes  "d8:cow says3:moo4:spam4:eggse"))))
+      (let [signed-bytes (map #(unchecked-byte (+ 256 %))
+                              [192 168 1 100 0x1b 0x39])
+            peers-dict (b/decode
+                         (byte-array
+                           (concat
+                             (map (comp int char) (seq "d5:peers6:"))
+                             [192 168 1 100 0x1b 0x39]
+                             (map (comp int char) (seq "e")))))]
+        (is (= signed-bytes (seq (get peers-dict "peers"))))))))
+
 
 
 (def gen-primitives (gen/one-of [gen/int gen/string-ascii]))
