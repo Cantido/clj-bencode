@@ -5,6 +5,15 @@
 
 A Clojure library for BitTorrent bencoding.
 
+## Table of Contents
+
+1. [Usage](#usage)
+   1. [Encoding data](#encoding-data)
+      1. [Examples](#encoding-examples)
+   1. [Decoding data](#decoding-data)
+      1. [Examples](#decoding-examples)
+1. [License](#license)
+
 ## Usage
 
 Clj-torrent's tests require Clojure v1.7 or later,
@@ -30,7 +39,7 @@ Strings are encoded into UTF-8.
 Note that a string containing non-ASCII characters cannot be encoded and then decoded without a custom step,
 because this library does not assume non-ASCII bytes are characters in a string.
 
-#### Examples
+#### Encoding examples
 
 ```clojure
 (require '[clj-bencode.core :as b])
@@ -91,7 +100,7 @@ Otherwise, the byte array we read is left untouched.
 <sup>2</sup> Map keys are not made into keywords, so a decoded map will have string keys, not keyword keys.
 Note that given <sup>1</sup> that this could result in a byte-array map key if your map keys contain non-ASCII characters.
 
-#### Examples
+#### Decoding examples
 
 ```clojure
 (require '[clj-bencode.core :as b])
