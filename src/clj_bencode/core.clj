@@ -8,8 +8,11 @@
            (java.nio ByteBuffer CharBuffer)
            (java.io InputStream Reader ByteArrayOutputStream)
            (org.apache.commons.io IOUtils)
-           (jdk.nashorn.internal.ir.debug JSONWriter)
-           (java.util.concurrent.atomic AtomicInteger AtomicLong)))
+           (java.util.concurrent.atomic AtomicInteger AtomicLong)
+           (java.io InputStream Reader ByteArrayOutputStream IOException)
+           (org.apache.commons.io IOUtils)))
+
+(def ^:private byte-array-class (class (byte-array 1)))
 
 (defn- int-base-10 [x]
   (->> x int str seq (map byte) byte-array))
@@ -104,8 +107,9 @@
 
 (declare ^:private decode-next)
 
-(defn- decode-int [stream delimeter & ch]
+(defn- decode-int [^InputStream stream delimeter & ch]
   (loop [i (if (nil? ch) (.read stream) (first ch)), result ""]
+    (when (= -1 (int i)) (throw (IOException. "End of input stream reached earlier than expected.")))
     (let [c (char i)]
       (if (= c delimeter)
         (BigInteger. result)
