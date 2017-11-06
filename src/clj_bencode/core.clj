@@ -4,68 +4,68 @@
   (:require [clojure.java.io :as io])
   (:import (java.util Collection Map)
            (java.nio.charset StandardCharsets)
-           (clojure.lang Keyword)
+           (clojure.lang Keyword Ratio Named)
            (java.nio ByteBuffer CharBuffer)
            (java.io InputStream Reader ByteArrayOutputStream)
-           (org.apache.commons.io IOUtils)))
-
-(def ^:private byte-array-class (class (byte-array 1)))
+           (org.apache.commons.io IOUtils)
+           (jdk.nashorn.internal.ir.debug JSONWriter)
+           (java.util.concurrent.atomic AtomicInteger AtomicLong)))
 
 (defn- int-base-10 [x]
   (->> x int str seq (map byte) byte-array))
 
-(declare ^:private represent)
+(defprotocol BencodeWriter
+  (-write [object ^ByteArrayOutputStream out]
+    "Print object to writer out as bencoding"))
 
-(defn- represent-integer
-  "Converts the given integer into a b-encoded byte array."
-  [x]
+(defn- write-bytes [xs ^ByteArrayOutputStream out]
   (.toByteArray
-    (doto (ByteArrayOutputStream.)
-      (.write (byte \i))
-      (.write (byte-array (map byte (seq (str (bigint x))))))
-      (.write (byte \e)))))
-
-(defn- represent-seq
-  "Converts the given sequence into a byte array.
-   Not the same as represent-collection; this function does
-   not put characters at the start and end of the array."
-  [s]
-  (.toByteArray
-    (doto (ByteArrayOutputStream.)
-      (.write (byte-array (mapcat represent (seq s)))))))
-
-(defn- represent-collection [coll]
-  (.toByteArray
-    (doto (ByteArrayOutputStream.)
-      (.write (byte \l))
-      (.write (bytes (represent-seq (seq coll))))
-      (.write (byte \e)))))
-
-(defn- represent-map [m]
-  (.toByteArray
-    (doto (ByteArrayOutputStream.)
-      (.write (byte \d))
-      (.write (bytes (represent-seq (apply concat (sort (seq m))))))
-      (.write (byte \e)))))
-
-(defn- represent-bytes [xs]
-  (.toByteArray
-    (doto (ByteArrayOutputStream.)
+    (doto out
       (.write (bytes (int-base-10 (count xs))))
       (.write (byte \:))
       (.write (bytes xs)))))
 
-(defn- represent-string [s]
-  (represent-bytes (.getBytes (str s) StandardCharsets/UTF_8)))
+(defn- write-string [s ^ByteArrayOutputStream out]
+  (write-bytes
+    (.getBytes
+      (str s)
+      StandardCharsets/UTF_8)
+    out))
 
-(defmulti ^:private represent class :default String)
+(defn- write-boolean [x ^ByteArrayOutputStream out])
 
-(defmethod represent Number [x] (represent-integer x))
-(defmethod represent String [x] (represent-string x))
-(defmethod represent byte-array-class [x] (represent-bytes x))
-(defmethod represent Keyword [x] (represent (name x)))
-(defmethod represent Collection [x] (represent-collection x))
-(defmethod represent Map [x] (represent-map x))
+(defn- write-named [x ^ByteArrayOutputStream out]
+  (write-string (name x) out))
+
+(defn- write-integer [x ^ByteArrayOutputStream out]
+  (.toByteArray
+    (doto out
+      (.write (byte \i))
+      (.write (byte-array (.getBytes (str (bigint x)) StandardCharsets/UTF_8)))
+      (.write (byte \e)))))
+
+(defn- write-seq-contents
+  "Converts the given sequence into a byte array.
+   Not the same as represent-collection; this function does
+   not put characters at the start and end of the array."
+  [s ^ByteArrayOutputStream  out]
+  (.toByteArray
+    (doto out
+      (.write (byte-array (mapcat #(-write % out) (seq s)))))))
+
+(defn- write-collection
+  [xs ^ByteArrayOutputStream out]
+  (.write out (byte \l))
+  (write-seq-contents (seq xs) out)
+  (.write out (byte \e))
+  (.toByteArray out))
+
+(defn- write-map [m ^ByteArrayOutputStream out]
+  (.write out (byte \d))
+  (write-seq-contents (apply concat (sort (seq m))) out)
+  (.write out (byte \e))
+  (.toByteArray out))
+
 
 
 (defn encode
@@ -73,7 +73,32 @@
 
    Strings are encoded to UTF-8, and byte arrays are stored untouched."
   [x]
-  (represent x))
+  (-write x (ByteArrayOutputStream.)))
+
+(extend Boolean       BencodeWriter {:-write write-boolean})
+(extend Byte          BencodeWriter {:-write write-integer})
+(extend Short         BencodeWriter {:-write write-integer})
+(extend Integer       BencodeWriter {:-write write-integer})
+(extend Long          BencodeWriter {:-write write-integer})
+(extend Float         BencodeWriter {:-write write-integer})
+(extend Double        BencodeWriter {:-write write-integer})
+(extend Ratio         BencodeWriter {:-write write-integer})
+(extend BigInteger    BencodeWriter {:-write write-integer})
+(extend BigDecimal    BencodeWriter {:-write write-integer})
+(extend AtomicInteger BencodeWriter {:-write write-integer})
+(extend AtomicLong    BencodeWriter {:-write write-integer})
+
+;; Symbols, Keywords, and Strings
+(extend Named        BencodeWriter {:-write write-named})
+(extend CharSequence BencodeWriter {:-write write-string})
+
+;; Collections
+(extend Map          BencodeWriter {:-write write-map})
+(extend Collection   BencodeWriter {:-write write-collection})
+
+;; Maybe a Java array, otherwise fail
+(extend java.lang.Object       BencodeWriter {:-write write-string})
+
 
 
 
