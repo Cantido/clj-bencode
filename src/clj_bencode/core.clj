@@ -12,21 +12,25 @@
            (java.io InputStream Reader ByteArrayOutputStream IOException)
            (org.apache.commons.io IOUtils)))
 
-(def ^:private byte-array-class (class (byte-array 1)))
+(def ^:private ByteArray (class (byte-array 1)))
 
 (defn- int-base-10 [x]
-  (->> x int str seq (map byte) byte-array))
+  (->> x bigint str seq (map byte) byte-array))
+
+(defn- write-int-contents [x out]
+  (.write out (bytes (int-base-10 x))))
 
 (defprotocol BencodeWriter
   (-write [object ^ByteArrayOutputStream out]
     "Print object to writer out as bencoding"))
 
+(defn- write-byte [x ^ByteArrayOutputStream out]
+  (.write out (byte x)))
+
 (defn- write-bytes [xs ^ByteArrayOutputStream out]
-  (.toByteArray
-    (doto out
-      (.write (bytes (int-base-10 (count xs))))
-      (.write (byte \:))
-      (.write (bytes xs)))))
+  (write-int-contents (count xs) out)
+  (.write out (byte \:))
+  (.write out (bytes xs)))
 
 (defn- write-string [s ^ByteArrayOutputStream out]
   (write-bytes
@@ -35,50 +39,42 @@
       StandardCharsets/UTF_8)
     out))
 
-(defn- write-boolean [x ^ByteArrayOutputStream out])
-
 (defn- write-named [x ^ByteArrayOutputStream out]
   (write-string (name x) out))
 
 (defn- write-integer [x ^ByteArrayOutputStream out]
-  (.toByteArray
-    (doto out
-      (.write (byte \i))
-      (.write (byte-array (.getBytes (str (bigint x)) StandardCharsets/UTF_8)))
-      (.write (byte \e)))))
+  (write-byte \i out)
+  (write-int-contents x out)
+  (write-byte \e out))
 
 (defn- write-seq-contents
   "Converts the given sequence into a byte array.
-   Not the same as represent-collection; this function does
+   Not the same as writing a collection; this function does
    not put characters at the start and end of the array."
-  [s ^ByteArrayOutputStream  out]
-  (.toByteArray
-    (doto out
-      (.write (byte-array (mapcat #(-write % out) (seq s)))))))
+  [s ^ByteArrayOutputStream out]
+  (doall (map #(-write % out) (seq s))))
 
 (defn- write-collection
   [xs ^ByteArrayOutputStream out]
-  (.write out (byte \l))
+  (write-byte \l out)
   (write-seq-contents (seq xs) out)
-  (.write out (byte \e))
-  (.toByteArray out))
+  (write-byte \e out))
 
 (defn- write-map [m ^ByteArrayOutputStream out]
-  (.write out (byte \d))
+  (write-byte \d out)
   (write-seq-contents (apply concat (sort (seq m))) out)
-  (.write out (byte \e))
-  (.toByteArray out))
-
-
+  (write-byte \e out))
 
 (defn encode
   "Encodes x into a b-encoded byte array.
 
    Strings are encoded to UTF-8, and byte arrays are stored untouched."
   [x]
-  (-write x (ByteArrayOutputStream.)))
+  (let [stream (ByteArrayOutputStream.)]
+    (-write x stream)
+    (.toByteArray stream)))
 
-(extend Boolean       BencodeWriter {:-write write-boolean})
+(extend Boolean       BencodeWriter {:-write write-string})
 (extend Byte          BencodeWriter {:-write write-integer})
 (extend Short         BencodeWriter {:-write write-integer})
 (extend Integer       BencodeWriter {:-write write-integer})
@@ -96,14 +92,9 @@
 (extend CharSequence BencodeWriter {:-write write-string})
 
 ;; Collections
+(extend ByteArray    BencodeWriter {:-write write-bytes})
 (extend Map          BencodeWriter {:-write write-map})
 (extend Collection   BencodeWriter {:-write write-collection})
-
-;; Maybe a Java array, otherwise fail
-(extend java.lang.Object       BencodeWriter {:-write write-string})
-
-
-
 
 (declare ^:private decode-next)
 

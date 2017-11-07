@@ -85,10 +85,15 @@
         (is (= "4:𐐷" (String. (bytes (b/encode "𐐷")))))
         (is (= "6:𐐷bc" (String. (bytes (b/encode "𐐷bc")))))
         (is (= "6:a𐐷c" (String. (bytes (b/encode "a𐐷c")))))
-        (is (= "6:ab𐐷" (String. (bytes (b/encode "ab𐐷")))))))
+        (is (= "6:ab𐐷" (String. (bytes (b/encode "ab𐐷"))))))
+      (testing "containing arbitrary bytes"
+        (is (= [(int \5) (int \:) 0x01 0x02 0x03 0x04 0x05]
+               (seq (b/encode (byte-array [0x01 0x02 0x03 0x04 0x05])))))))
     (testing "lists"
       (testing "of integers"
-        (is (= "li1ei2ei3ee" (String. (bytes (b/encode [1 2 3]))))))
+        (is (= "li1ei2ei3ee" (String. (bytes (b/encode [1 2 3])))))
+        (is (= "li0ei0ei0ei0ei0ee" (String. (bytes (b/encode (list 0 0 0 0 0)))))))
+
       (testing "of strings"
         (is (= "l1:a1:b1:ce" (String. (bytes (b/encode ["a" "b" "c"])))))
         (is (= "l1:00:e" (String. (bytes (b/encode ["0" ""]))))))
@@ -130,7 +135,8 @@
       (is (= [] (b/decode (.getBytes  "le"))))
       (is (= [1] (b/decode (.getBytes  "li1ee"))))
       (testing "of integers"
-        (is (= [1 2 3] (b/decode (.getBytes  "li1ei2ei3ee")))))
+        (is (= [1 2 3] (b/decode (.getBytes  "li1ei2ei3ee"))))
+        (is (= [0 0 0 0 0] (b/decode (.getBytes  "li0ei0ei0ei0ei0ee")))))
       (testing "of strings"
         (is (= ["a" "b" "c"] (b/decode (.getBytes  "l1:a1:b1:ce"))))
         (is (= ["0" ""] (b/decode (.getBytes  "l1:00:e")))))
