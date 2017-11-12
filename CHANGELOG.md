@@ -5,16 +5,15 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
-## Removed
-- Removed runtime dependency on Apache Commons IO. It is only used for tests.
 
+## [4.0.1] - 2017-11-12
 ### Added
 - Added tests under Clojure 1.7 and 1.9, in addition to the current 1.8
 - Usage guide added to README
 
 ### Changed
 - `decode` throws a more useful exception message when the input stream runs out unexpectedly.
-- `test.check` moved to dev dependencies
+- `test.check` and `commons-io` moved to dev dependencies
 
 ## [4.0.0] - 2017-10-25
 ### Changed
@@ -50,7 +49,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Byte-array encoding and decoding is not supported.
   Data becomes corrupted if you try this.
 
-[Unreleased]: https://github.com/cantido/clj-bencode/compare/4.0.0...HEAD
+[Unreleased]: https://github.com/cantido/clj-bencode/compare/4.0.1...HEAD
+[4.0.1]: https://github.com/cantido/clj-bencode/compare/4.0.0...4.0.1
 [4.0.0]: https://github.com/cantido/clj-bencode/compare/3.1.0...4.0.0
 [3.1.0]: https://github.com/cantido/clj-bencode/compare/3.0.0...3.1.0
 [3.0.0]: https://github.com/cantido/clj-bencode/compare/2.0.0...3.0.0
