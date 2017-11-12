@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+## Removed
+- Removed runtime dependency on Apache Commons IO. It is only used for tests.
 
 ### Added
 - Added tests under Clojure 1.7 and 1.9, in addition to the current 1.8
