@@ -109,7 +109,33 @@
         (is (= "d8:cow says3:mooe" (String. (bytes (b/encode {"cow says" "moo"})))))
         (is (= "d3:cow3:moo4:spam4:eggse" (String. (bytes (b/encode {"cow" "moo" "spam" "eggs"}))))))
       (testing "should sort their keys"
-        (is (= "d1:ai1e1:bi2ee" (String. (bytes (b/encode {"b" 2 "a" 1})))))))))
+        (is (= "d1:ai1e1:bi2ee" (String. (bytes (b/encode {"b" 2 "a" 1}))))))))
+  (testing "real data examples"
+    (is (= (str "d4:infod"
+                "8:announce43:https://torrents.linuxmint.com/announce.php"
+                "10:created by25:Transmission/2.84 (14307)"
+                "13:creation datei1499021259e"
+                "8:encoding5:UTF-8"
+                "6:lengthi1676083200e"
+                "4:name33:linuxmint-18.2-cinnamon-64bit.iso"
+                "12:piece lengthi1048576e"
+                "6:piecesli1ei2ei3ei4ei5ee"
+                "7:privatei0eee")
+           (->
+             {"info"
+              {"piece length" 1048576
+               "pieces" [1 2 3 4 5]
+               "private" 0
+               "name" "linuxmint-18.2-cinnamon-64bit.iso"
+               "length" 1676083200
+               "encoding" "UTF-8"
+               "announce" "https://torrents.linuxmint.com/announce.php"
+               "created by" "Transmission/2.84 (14307)"
+               "creation date" 1499021259}}
+             b/encode
+             (bytes)
+             (String.))))))
+
 
 (defn byte-seq [s]
   (seq (.getBytes (str s))))
