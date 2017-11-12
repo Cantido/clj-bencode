@@ -6,8 +6,7 @@
            (java.nio.charset StandardCharsets)
            (clojure.lang Keyword)
            (java.nio ByteBuffer CharBuffer)
-           (java.io InputStream Reader ByteArrayOutputStream IOException)
-           (org.apache.commons.io IOUtils)))
+           (java.io InputStream Reader ByteArrayOutputStream IOException)))
 
 (def ^:private byte-array-class (class (byte-array 1)))
 
